@@ -1,7 +1,12 @@
 NETWORK=ci-network
 
 create-volume:
-	mkdir -p $(PWD)/mysql $(PWD)/jenkins_home
+	mkdir -p \
+	$(PWD)/mysql \
+	$(PWD)/jenkins_home \
+	$(PWD)/gitlab/config \
+	$(PWD)/gitlab/data \
+	$(PWD)/gitlab/logs
 
 create-network:
 	docker network create \
@@ -30,6 +35,18 @@ create-jenkins:
 	--network $(NETWORK) \
 	pin/jenkins
 
+create-gitlab:
+	docker service create \
+	--name gitlab \
+	--publish 10443:443 \
+	--publish 1080:80 \
+	--publish 1022:22 \
+	--mount type=bind,source=$(PWD)/gitlab/config,destination=/etc/gitlab \
+	--mount type=bind,source=$(PWD)/gitlab/logs,destination=/var/log/gitlab \
+	--mount type=bind,source=$(PWD)/gitlab/data,destination=/var/opt/gitlab \
+	--network $(NETWORK) \
+	gitlab/gitlab-ce:latest
+
 create-myadmin:
 	docker service create \
 	--name myadmin \
@@ -47,6 +64,9 @@ rm-jenkins:
 
 rm-myadmin:
 	docker service rm myadmin
+
+rm-gitlab:
+	docker service rm gitlab
 
 create: create-mysql create-jenkins
 
